@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id               String                 @id @default(cuid())
+  fullName         String
+  headline         String?
+  email            String
+  phone            String
+  address          String
+  summary          String
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  socialLinks      SocialLink[]
+  employment       EmploymentHistory[]
+  education        EducationHistory[]
+  skills           Skill[]
+  tailoredVersions TailoredResumeVersion[]
+}
+
+model SocialLink {
+  id        String   @id @default(cuid())
+  label     String
+  url       String
+  sortOrder Int
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model EmploymentHistory {
+  id          String               @id @default(cuid())
+  companyName String
+  period      String
+  title       String
+  logoUrl     String?
+  location    String?
+  website     String?
+  sortOrder   Int
+  profileId   String
+  profile     Profile              @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  workItems   EmploymentItem[]
+  techStacks  EmploymentTechStack[]
+}
+
+model EmploymentItem {
+  id           String            @id @default(cuid())
+  content      String
+  sortOrder    Int
+  employmentId String
+  employment   EmploymentHistory @relation(fields: [employmentId], references: [id], onDelete: Cascade)
+}
+
+model EmploymentTechStack {
+  id           String            @id @default(cuid())
+  name         String
+  sortOrder    Int
+  employmentId String
+  employment   EmploymentHistory @relation(fields: [employmentId], references: [id], onDelete: Cascade)
+}
+
+model EducationHistory {
+  id             String   @id @default(cuid())
+  universityName String
+  period         String
+  degree         String
+  summary        String?
+  sortOrder      Int
+  profileId      String
+  profile        Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model Skill {
+  id        String   @id @default(cuid())
+  name      String
+  sortOrder Int
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model TailoredResumeVersion {
+  id           String   @id @default(cuid())
+  label        String?
+  title        String?
+  snapshotJson String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  profileId    String
+  profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
