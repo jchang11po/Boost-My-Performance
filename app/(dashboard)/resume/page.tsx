@@ -27,7 +27,7 @@ export default async function ResumePage() {
   return (
     <div className="space-y-6">
       <section className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
-        <Card className="bg-gradient-to-br from-primary/10 via-card to-card">
+        <Card className="bg-linear-to-br from-primary/10 via-card to-card">
           <CardHeader>
             <CardTitle className="text-3xl">Resume workspace</CardTitle>
             <CardDescription>

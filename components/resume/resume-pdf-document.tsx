@@ -181,7 +181,7 @@ export function ResumePdfDocument({ resume }: Props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Skills</Text>
           <View style={styles.skillsWrap}>
-            {skills.map((skill) => (
+            {skills.filter(skill => skill.name?.trim()).map((skill) => (
               <Text key={skill.name} style={styles.skillPill}>
                 {skill.name}
               </Text>
