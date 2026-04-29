@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
   title: {
     color: "#4f46e5",
     fontSize: 11,
-    marginTop: 4,
+    marginTop: 16,
   },
   contactRow: {
     color: "#4b5563",

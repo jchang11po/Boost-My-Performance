@@ -1,12 +1,17 @@
 import { z } from "zod";
 
-const optionalUrl = z
-  .string()
-  .trim()
-  .optional()
-  .or(z.literal(""))
-  .transform((value) => value?.trim() || undefined)
-  .pipe(z.string().url().optional());
+const emailValidator = z.string().email();
+const urlValidator = z.string().url();
+
+const draftString = z.string().trim();
+
+const optionalEmail = z.string().trim().refine((value) => value === "" || emailValidator.safeParse(value).success, {
+  message: "Enter a valid email",
+});
+
+const draftUrl = z.string().trim().refine((value) => value === "" || urlValidator.safeParse(value).success, {
+  message: "Enter a valid URL",
+});
 
 const optionalString = z
   .string()
@@ -17,56 +22,90 @@ const optionalString = z
 
 export const socialLinkSchema = z.object({
   id: z.string().optional(),
-  label: z.string().trim().min(1, "Add a platform name"),
-  url: z.string().trim().url("Enter a valid social link"),
+  label: draftString,
+  url: z.string().trim().refine((value) => value === "" || urlValidator.safeParse(value).success, {
+    message: "Enter a valid social link",
+  }),
 });
 
 export const employmentItemSchema = z.object({
   id: z.string().optional(),
-  content: z.string().trim().min(1, "Add a work item"),
+  content: draftString,
 });
 
 export const techStackSchema = z.object({
   id: z.string().optional(),
-  name: z.string().trim().min(1, "Add a tech stack item"),
+  name: draftString,
 });
 
 export const employmentSchema = z.object({
   id: z.string().optional(),
-  companyName: z.string().trim().min(1, "Company name is required"),
-  period: z.string().trim().min(1, "Period is required"),
-  title: z.string().trim().min(1, "Title is required"),
-  logoUrl: optionalUrl,
-  location: optionalString,
-  website: optionalUrl,
-  workItems: z.array(employmentItemSchema).min(1, "Add at least one work item"),
+  companyName: draftString,
+  period: draftString,
+  title: draftString,
+  logoUrl: draftUrl,
+  location: draftString,
+  website: draftUrl,
+  workItems: z.array(employmentItemSchema).default([]),
   techStacks: z.array(techStackSchema).default([]),
 });
 
 export const educationSchema = z.object({
   id: z.string().optional(),
-  universityName: z.string().trim().min(1, "University name is required"),
-  period: z.string().trim().min(1, "Period is required"),
-  degree: z.string().trim().min(1, "Degree is required"),
-  summary: optionalString,
+  universityName: draftString,
+  period: draftString,
+  degree: draftString,
+  summary: draftString,
 });
 
 export const skillSchema = z.object({
   id: z.string().optional(),
-  name: z.string().trim().min(1, "Skill is required"),
+  name: draftString,
 });
 
+const skillsArraySchema = z.array(skillSchema).superRefine((skills, ctx) => {
+  const seenSkills = new Map<string, number>();
+
+  skills.forEach((skill, index) => {
+    const normalizedName = skill.name.trim().toLowerCase();
+
+    if (!normalizedName) {
+      return;
+    }
+
+    const firstSeenIndex = seenSkills.get(normalizedName);
+
+    if (firstSeenIndex !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "This skill is duplicated",
+        path: [index, "name"],
+      });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "This skill is duplicated",
+        path: [firstSeenIndex, "name"],
+      });
+      return;
+    }
+
+    seenSkills.set(normalizedName, index);
+  });
+});
+
+const skillsSchema = skillsArraySchema.default([]);
+
 export const profileFormSchema = z.object({
-  fullName: z.string().trim().min(1, "Full name is required"),
-  headline: optionalString,
-  email: z.string().trim().email("Enter a valid email"),
-  phone: z.string().trim().min(1, "Phone number is required"),
-  address: z.string().trim().min(1, "Address is required"),
-  summary: z.string().trim().min(1, "Summary is required"),
+  fullName: draftString,
+  headline: draftString,
+  email: optionalEmail,
+  phone: draftString,
+  address: draftString,
+  summary: draftString,
   socialLinks: z.array(socialLinkSchema).default([]),
-  employment: z.array(employmentSchema).min(1, "Add at least one employment entry"),
+  employment: z.array(employmentSchema).default([]),
   education: z.array(educationSchema).default([]),
-  skills: z.array(skillSchema).min(1, "Add at least one skill"),
+  skills: skillsSchema,
 });
 
 export const tailoredResumeSchema = profileFormSchema.extend({
@@ -80,11 +119,11 @@ export const generatedTailoringSchema = z.object({
   employment: z.array(
     z.object({
       title: z.string().trim().min(1, "Title is required"),
-      workItems: z.array(employmentItemSchema).min(1, "Add at least one work item"),
+      workItems: z.array(employmentItemSchema).default([]),
       techStacks: z.array(techStackSchema).default([]),
     }),
   ),
-  skills: z.array(skillSchema).min(1, "Add at least one skill"),
+  skills: skillsArraySchema.default([]),
 });
 
 export const generateTailoredResumeRequestSchema = z.object({
@@ -94,10 +133,18 @@ export const generateTailoredResumeRequestSchema = z.object({
   additionalInstructions: optionalString,
 });
 
+export const tailoringSettingsSchema = z.object({
+  updateWorkItems: z.boolean().default(true),
+  updateEmploymentTitles: z.boolean().default(true),
+  updateSkills: z.boolean().default(true),
+  updateSummary: z.boolean().default(true),
+});
+
 export type ProfileFormValues = z.input<typeof profileFormSchema>;
 export type TailoredResumeValues = z.input<typeof tailoredResumeSchema>;
 export type GeneratedTailoringValues = z.infer<typeof generatedTailoringSchema>;
 export type GenerateTailoredResumeRequest = z.input<typeof generateTailoredResumeRequestSchema>;
+export type TailoringSettingsValues = z.infer<typeof tailoringSettingsSchema>;
 
 export function createEmptyProfile(): ProfileFormValues {
   return {

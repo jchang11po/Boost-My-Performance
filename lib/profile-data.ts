@@ -86,11 +86,37 @@ export function mapProfileToTailoredResume(profile: ProfileWithRelations): Tailo
   };
 }
 
+function hasContent(value: string | null | undefined) {
+  return Boolean(value?.trim());
+}
+
 export function buildProfileWriteData(values: ProfileFormValues) {
-  const socialLinks = values.socialLinks ?? [];
-  const employment = values.employment ?? [];
-  const education = values.education ?? [];
-  const skills = values.skills ?? [];
+  const socialLinks = (values.socialLinks ?? []).filter((link) => hasContent(link.label) || hasContent(link.url));
+  const employment = (values.employment ?? [])
+    .map((employment) => ({
+      ...employment,
+      workItems: (employment.workItems ?? []).filter((item) => hasContent(item.content)),
+      techStacks: (employment.techStacks ?? []).filter((stack) => hasContent(stack.name)),
+    }))
+    .filter(
+      (employment) =>
+        hasContent(employment.companyName) ||
+        hasContent(employment.period) ||
+        hasContent(employment.title) ||
+        hasContent(employment.logoUrl) ||
+        hasContent(employment.location) ||
+        hasContent(employment.website) ||
+        employment.workItems.length > 0 ||
+        employment.techStacks.length > 0,
+    );
+  const education = (values.education ?? []).filter(
+    (education) =>
+      hasContent(education.universityName) ||
+      hasContent(education.period) ||
+      hasContent(education.degree) ||
+      hasContent(education.summary),
+  );
+  const skills = (values.skills ?? []).filter((skill) => hasContent(skill.name));
 
   return {
     fullName: values.fullName,

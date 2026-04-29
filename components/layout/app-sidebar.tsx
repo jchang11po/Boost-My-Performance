@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Menu, Sparkles, X } from "lucide-react";
+import { LayoutDashboard, Menu, Settings, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -19,6 +19,11 @@ const navItems = [
     href: "/resume",
     label: "Resume",
     icon: Sparkles,
+  },
+  {
+    href: "/settings",
+    label: "Settings",
+    icon: Settings,
   },
 ];
 

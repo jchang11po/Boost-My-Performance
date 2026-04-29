@@ -4,6 +4,8 @@ import { ProfileForm } from "@/components/resume/profile-form";
 import { db } from "@/lib/db";
 import { mapProfileToForm, profileInclude } from "@/lib/profile-data";
 
+export const dynamic = "force-dynamic";
+
 export default async function EditProfilePage({
   params,
 }: {

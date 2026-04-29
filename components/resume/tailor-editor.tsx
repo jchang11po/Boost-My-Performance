@@ -1,10 +1,10 @@
 "use client";
 
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { PDFDownloadLink, PDFViewer } from "@react-pdf/renderer";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, RotateCcw, Save, Trash2, WandSparkles } from "lucide-react";
+import { ChevronDown, Plus, RotateCcw, Save, Trash2, WandSparkles } from "lucide-react";
 import { useFieldArray, useForm, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
 
 import { ResumePdfDocument } from "@/components/resume/resume-pdf-document";
@@ -33,7 +33,7 @@ function InputField({
   error,
   label,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   error?: string;
   label: string;
 }) {
@@ -43,6 +43,50 @@ function InputField({
       {children}
       <FieldError message={error} />
     </div>
+  );
+}
+
+function ReviewSection({
+  actions,
+  children,
+  contentClassName = "space-y-4",
+  defaultOpen = true,
+  description,
+  title,
+}: {
+  actions?: ReactNode;
+  children: ReactNode;
+  contentClassName?: string;
+  defaultOpen?: boolean;
+  description: string;
+  title: string;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-1 items-start gap-3">
+            <button
+              className="mt-0.5 rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              type="button"
+              onClick={() => setIsOpen((open) => !open)}
+              aria-expanded={isOpen}
+              aria-label={`${isOpen ? "Collapse" : "Expand"} ${title}`}
+            >
+              <ChevronDown className={cn("size-4 transition-transform", isOpen ? "rotate-0" : "-rotate-90")} />
+            </button>
+            <div className="space-y-1">
+              <CardTitle>{title}</CardTitle>
+              <CardDescription>{description}</CardDescription>
+            </div>
+          </div>
+          {actions}
+        </div>
+      </CardHeader>
+      {isOpen ? <CardContent className={contentClassName}>{children}</CardContent> : null}
+    </Card>
   );
 }
 
@@ -329,15 +373,10 @@ export function TailorEditor({
         {error ? <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p> : null}
         {saveMessage ? <p className="rounded-lg border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary">{saveMessage}</p> : null}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>AI tailoring</CardTitle>
-            <CardDescription>
-              Paste the target role and job description, then generate tailored resume content using the OpenAI API key from
-              your `.env` file.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <ReviewSection
+          title="AI tailoring"
+          description="Paste the target role and job description, then generate tailored resume content using the OpenAI API key from your `.env` file."
+        >
             <InputField label="Target role">
               <Input
                 placeholder="Senior Frontend Engineer"
@@ -360,18 +399,19 @@ export function TailorEditor({
               />
             </InputField>
             <p className="text-sm text-muted-foreground">
-              The generated output updates the resume title, summary, employment titles, work items, tech stacks, and skills
+              The generated output follows your global{" "}
+              <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/settings">
+                generation settings
+              </Link>{" "}
               while preserving your saved source profile structure.
             </p>
-          </CardContent>
-        </Card>
+        </ReviewSection>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Resume identity</CardTitle>
-            <CardDescription>Update the role-facing title and core contact details for this tailored version.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
+        <ReviewSection
+          title="Resume identity"
+          description="Update the role-facing title and core contact details for this tailored version."
+          contentClassName="grid gap-4 md:grid-cols-2"
+        >
             <InputField label="Resume label">
               <Input placeholder="Frontend role, 2026" {...form.register("label")} />
             </InputField>
@@ -395,23 +435,18 @@ export function TailorEditor({
                 <Textarea {...form.register("summary")} />
               </InputField>
             </div>
-          </CardContent>
-        </Card>
+        </ReviewSection>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <CardTitle>Social links</CardTitle>
-                <CardDescription>Fine-tune which links appear on this exported resume.</CardDescription>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => socialLinks.append({ label: "", url: "" })}>
-                <Plus className="size-4" />
-                Add link
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <ReviewSection
+          title="Social links"
+          description="Fine-tune which links appear on this exported resume."
+          actions={
+            <Button size="sm" variant="outline" onClick={() => socialLinks.append({ label: "", url: "" })}>
+              <Plus className="size-4" />
+              Add link
+            </Button>
+          }
+        >
             {socialLinks.fields.length ? (
               socialLinks.fields.map((field, index) => (
                 <div key={field.id} className="grid gap-4 rounded-xl border border-border p-4 md:grid-cols-[1fr_2fr_auto]">
@@ -431,38 +466,33 @@ export function TailorEditor({
             ) : (
               <p className="text-sm text-muted-foreground">No social links selected for this tailored version.</p>
             )}
-          </CardContent>
-        </Card>
+        </ReviewSection>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <CardTitle>Experience overrides</CardTitle>
-                <CardDescription>Rewrite accomplishments, tighten scope, and emphasize the right stacks per role.</CardDescription>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  employment.append({
-                    companyName: "",
-                    period: "",
-                    title: "",
-                    logoUrl: "",
-                    location: "",
-                    website: "",
-                    workItems: [{ content: "" }],
-                    techStacks: [{ name: "" }],
-                  })
-                }
-              >
-                <Plus className="size-4" />
-                Add role
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <ReviewSection
+          title="Experience overrides"
+          description="Rewrite accomplishments, tighten scope, and emphasize the right stacks per role."
+          actions={
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                employment.append({
+                  companyName: "",
+                  period: "",
+                  title: "",
+                  logoUrl: "",
+                  location: "",
+                  website: "",
+                  workItems: [{ content: "" }],
+                  techStacks: [{ name: "" }],
+                })
+              }
+            >
+              <Plus className="size-4" />
+              Add role
+            </Button>
+          }
+        >
             {employment.fields.map((field, index) => (
               <TailorEmploymentSection
                 key={field.id}
@@ -473,23 +503,19 @@ export function TailorEditor({
                 remove={employment.remove}
               />
             ))}
-          </CardContent>
-        </Card>
+        </ReviewSection>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <CardTitle>Skills</CardTitle>
-                <CardDescription>Update the skills section to reflect the target opportunity.</CardDescription>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => skills.append({ name: "" })}>
-                <Plus className="size-4" />
-                Add skill
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
+        <ReviewSection
+          title="Skills"
+          description="Update the skills section to reflect the target opportunity."
+          contentClassName="grid gap-4 md:grid-cols-2"
+          actions={
+            <Button size="sm" variant="outline" onClick={() => skills.append({ name: "" })}>
+              <Plus className="size-4" />
+              Add skill
+            </Button>
+          }
+        >
             {skills.fields.map((field, index) => (
               <div key={field.id} className="grid gap-3 rounded-xl border border-border p-4 md:grid-cols-[1fr_auto]">
                 <InputField label="Skill" error={form.formState.errors.skills?.[index]?.name?.message}>
@@ -502,23 +528,18 @@ export function TailorEditor({
                 </div>
               </div>
             ))}
-          </CardContent>
-        </Card>
+        </ReviewSection>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <CardTitle>Education</CardTitle>
-                <CardDescription>Keep or adjust academic details for the exported version.</CardDescription>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => education.append({ universityName: "", period: "", degree: "", summary: "" })}>
-                <Plus className="size-4" />
-                Add education
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <ReviewSection
+          title="Education"
+          description="Keep or adjust academic details for the exported version."
+          actions={
+            <Button size="sm" variant="outline" onClick={() => education.append({ universityName: "", period: "", degree: "", summary: "" })}>
+              <Plus className="size-4" />
+              Add education
+            </Button>
+          }
+        >
             {education.fields.map((field, index) => (
               <div key={field.id} className="grid gap-4 rounded-xl border border-border p-4 md:grid-cols-2">
                 <InputField label="University" error={form.formState.errors.education?.[index]?.universityName?.message}>
@@ -543,15 +564,13 @@ export function TailorEditor({
                 </div>
               </div>
             ))}
-          </CardContent>
-        </Card>
+        </ReviewSection>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Saved tailored versions</CardTitle>
-            <CardDescription>Saved snapshots help you keep role-specific resume variants without changing the source profile.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <ReviewSection
+          title="Saved tailored versions"
+          description="Saved snapshots help you keep role-specific resume variants without changing the source profile."
+          contentClassName="space-y-3"
+        >
             {savedVersions.length ? (
               savedVersions.map((version) => (
                 <div key={version.id} className="flex items-center justify-between rounded-xl border border-border p-4">
@@ -567,8 +586,7 @@ export function TailorEditor({
             ) : (
               <p className="text-sm text-muted-foreground">No tailored versions saved yet.</p>
             )}
-          </CardContent>
-        </Card>
+        </ReviewSection>
       </div>
 
       <div className="space-y-4">

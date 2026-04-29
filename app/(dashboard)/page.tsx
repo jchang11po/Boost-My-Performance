@@ -13,7 +13,7 @@ const features = [
   {
     icon: WandSparkles,
     title: "Tailor Fast",
-    description: "Generate a tailored version by updating title, work items, tech stacks, and skills.",
+    description: "Generate a tailored version using global controls for summary, titles, bullets, and skills.",
   },
   {
     icon: Sparkles,

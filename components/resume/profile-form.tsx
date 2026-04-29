@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useFieldArray, useForm, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,6 +42,52 @@ function InputField({
   );
 }
 
+type FormSectionKey = "basics" | "summary" | "socialLinks" | "employment" | "education" | "skills";
+
+function SectionCard({
+  children,
+  description,
+  headerAction,
+  isOpen,
+  onToggle,
+  title,
+}: {
+  children: React.ReactNode;
+  description: string;
+  headerAction?: React.ReactNode;
+  isOpen: boolean;
+  onToggle: () => void;
+  title: string;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle>{title}</CardTitle>
+              <CardDescription>{description}</CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              aria-expanded={isOpen}
+              aria-label={isOpen ? `Collapse ${title}` : `Expand ${title}`}
+              onClick={onToggle}
+            >
+              <ChevronDown className={`size-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+            </Button>
+          </div>
+          {headerAction ? <div className="flex items-center gap-2">{headerAction}</div> : null}
+        </div>
+      </CardHeader>
+      {isOpen ? <CardContent>{children}</CardContent> : null}
+    </Card>
+  );
+}
+
 function EmploymentSection({
   control,
   errors,
@@ -66,104 +112,185 @@ function EmploymentSection({
   });
 
   const sectionErrors = errors.employment?.[index];
+  const [isOpen, setIsOpen] = useState(true);
 
   return (
     <div className="space-y-4 rounded-xl border border-border p-4">
       <div className="flex items-center justify-between gap-4">
-        <h3 className="font-medium">Employment #{index + 1}</h3>
-        <Button disabled={index === 0} size="sm" variant="ghost" onClick={() => remove(index)}>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-expanded={isOpen}
+            aria-label={isOpen ? `Collapse employment ${index + 1}` : `Expand employment ${index + 1}`}
+            onClick={() => setIsOpen((current) => !current)}
+          >
+            <ChevronDown className={`size-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+          </Button>
+          <h3 className="font-medium">Employment #{index + 1}</h3>
+        </div>
+        <Button type="button" disabled={index === 0} size="sm" variant="ghost" onClick={() => remove(index)}>
           <Trash2 className="size-4" />
           Remove
         </Button>
       </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <InputField id={`company-${index}`} label="Company name" error={sectionErrors?.companyName?.message}>
-          <Input id={`company-${index}`} {...register(`employment.${index}.companyName`)} />
-        </InputField>
-        <InputField id={`period-${index}`} label="Period" error={sectionErrors?.period?.message}>
-          <Input id={`period-${index}`} placeholder="2022 - Present" {...register(`employment.${index}.period`)} />
-        </InputField>
-        <InputField id={`title-${index}`} label="Title" error={sectionErrors?.title?.message}>
-          <Input id={`title-${index}`} {...register(`employment.${index}.title`)} />
-        </InputField>
-        <InputField id={`location-${index}`} label="Company location" error={sectionErrors?.location?.message}>
-          <Input id={`location-${index}`} {...register(`employment.${index}.location`)} />
-        </InputField>
-        <InputField id={`logo-${index}`} label="Company logo URL" error={sectionErrors?.logoUrl?.message}>
-          <Input id={`logo-${index}`} placeholder="https://..." {...register(`employment.${index}.logoUrl`)} />
-        </InputField>
-        <InputField id={`website-${index}`} label="Company website" error={sectionErrors?.website?.message}>
-          <Input id={`website-${index}`} placeholder="https://..." {...register(`employment.${index}.website`)} />
-        </InputField>
-      </div>
-
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-4">
-          <Label>Work items</Label>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => workItems.append({ content: "" })}
-          >
-            <Plus className="size-4" />
-            Add item
-          </Button>
-        </div>
-        {workItems.fields.map((field, workIndex) => (
-          <div key={field.id} className="space-y-2 rounded-lg border border-border p-3">
-            <div className="flex justify-end">
-              <Button
-                disabled={workItems.fields.length === 1}
-                size="sm"
-                variant="ghost"
-                onClick={() => workItems.remove(workIndex)}
-              >
-                <Trash2 className="size-4" />
-                Remove
-              </Button>
-            </div>
-            <Textarea
-              placeholder="Describe an impact-driven achievement"
-              {...register(`employment.${index}.workItems.${workIndex}.content`)}
-            />
-            <FieldError message={sectionErrors?.workItems?.[workIndex]?.content?.message} />
+      {isOpen ? (
+        <>
+          <div className="grid gap-4 md:grid-cols-2">
+            <InputField id={`company-${index}`} label="Company name" error={sectionErrors?.companyName?.message}>
+              <Input id={`company-${index}`} {...register(`employment.${index}.companyName`)} />
+            </InputField>
+            <InputField id={`period-${index}`} label="Period" error={sectionErrors?.period?.message}>
+              <Input id={`period-${index}`} placeholder="2022 - Present" {...register(`employment.${index}.period`)} />
+            </InputField>
+            <InputField id={`title-${index}`} label="Title" error={sectionErrors?.title?.message}>
+              <Input id={`title-${index}`} {...register(`employment.${index}.title`)} />
+            </InputField>
+            <InputField id={`location-${index}`} label="Company location" error={sectionErrors?.location?.message}>
+              <Input id={`location-${index}`} {...register(`employment.${index}.location`)} />
+            </InputField>
+            <InputField id={`logo-${index}`} label="Company logo URL" error={sectionErrors?.logoUrl?.message}>
+              <Input id={`logo-${index}`} placeholder="https://..." {...register(`employment.${index}.logoUrl`)} />
+            </InputField>
+            <InputField id={`website-${index}`} label="Company website" error={sectionErrors?.website?.message}>
+              <Input id={`website-${index}`} placeholder="https://..." {...register(`employment.${index}.website`)} />
+            </InputField>
           </div>
-        ))}
-      </div>
 
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-4">
-          <Label>Tech stacks</Label>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => techStacks.append({ name: "" })}
-          >
-            <Plus className="size-4" />
-            Add stack
-          </Button>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          {techStacks.fields.map((field, techIndex) => (
-            <div key={field.id} className="space-y-2 rounded-lg border border-border p-3">
-              <div className="flex justify-end">
-                <Button
-                  disabled={techStacks.fields.length === 1}
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => techStacks.remove(techIndex)}
-                >
-                  <Trash2 className="size-4" />
-                  Remove
-                </Button>
+          <div className="space-y-3">
+            <Label>Work items</Label>
+            {workItems.fields.map((field, workIndex) => (
+              <div key={field.id} className="space-y-2 rounded-lg border border-border p-3">
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    disabled={workItems.fields.length === 1}
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => workItems.remove(workIndex)}
+                  >
+                    <Trash2 className="size-4" />
+                    Remove
+                  </Button>
+                </div>
+                <Textarea
+                  placeholder="Describe an impact-driven achievement"
+                  {...register(`employment.${index}.workItems.${workIndex}.content`)}
+                />
+                <FieldError message={sectionErrors?.workItems?.[workIndex]?.content?.message} />
               </div>
-              <Input placeholder="Next.js" {...register(`employment.${index}.techStacks.${techIndex}.name`)} />
-              <FieldError message={sectionErrors?.techStacks?.[techIndex]?.name?.message} />
+            ))}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="w-fit"
+              onClick={() => workItems.append({ content: "" })}
+            >
+              <Plus className="size-4" />
+              Add item
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            <Label>Tech stacks</Label>
+            <div className="grid gap-3 md:grid-cols-2">
+              {techStacks.fields.map((field, techIndex) => (
+                <div key={field.id} className="space-y-2 rounded-lg border border-border p-3">
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      disabled={techStacks.fields.length === 1}
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => techStacks.remove(techIndex)}
+                    >
+                      <Trash2 className="size-4" />
+                      Remove
+                    </Button>
+                  </div>
+                  <Input placeholder="Next.js" {...register(`employment.${index}.techStacks.${techIndex}.name`)} />
+                  <FieldError message={sectionErrors?.techStacks?.[techIndex]?.name?.message} />
+                </div>
+              ))}
             </div>
-          ))}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="w-fit"
+              onClick={() => techStacks.append({ name: "" })}
+            >
+              <Plus className="size-4" />
+              Add stack
+            </Button>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function EducationSection({
+  errors,
+  itemCount,
+  index,
+  register,
+  remove,
+}: {
+  errors: FieldErrors<ProfileFormValues>;
+  itemCount: number;
+  index: number;
+  register: UseFormRegister<ProfileFormValues>;
+  remove: (index: number) => void;
+}) {
+  const sectionErrors = errors.education?.[index];
+  const [isOpen, setIsOpen] = useState(true);
+
+  return (
+    <div className="space-y-4 rounded-xl border border-border p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-expanded={isOpen}
+            aria-label={isOpen ? `Collapse education ${index + 1}` : `Expand education ${index + 1}`}
+            onClick={() => setIsOpen((current) => !current)}
+          >
+            <ChevronDown className={`size-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+          </Button>
+          <h3 className="font-medium">Education #{index + 1}</h3>
         </div>
+        <Button type="button" disabled={itemCount === 1} variant="ghost" onClick={() => remove(index)}>
+          <Trash2 className="size-4" />
+          Remove
+        </Button>
       </div>
+      {isOpen ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          <InputField
+            id={`education-university-${index}`}
+            label="University name"
+            error={sectionErrors?.universityName?.message}
+          >
+            <Input id={`education-university-${index}`} {...register(`education.${index}.universityName`)} />
+          </InputField>
+          <InputField id={`education-period-${index}`} label="Period" error={sectionErrors?.period?.message}>
+            <Input id={`education-period-${index}`} placeholder="2016 - 2020" {...register(`education.${index}.period`)} />
+          </InputField>
+          <InputField id={`education-degree-${index}`} label="Degree" error={sectionErrors?.degree?.message}>
+            <Input id={`education-degree-${index}`} {...register(`education.${index}.degree`)} />
+          </InputField>
+          <div className="md:col-span-2">
+            <InputField id={`education-summary-${index}`} label="Summary" error={sectionErrors?.summary?.message}>
+              <Textarea id={`education-summary-${index}`} {...register(`education.${index}.summary`)} />
+            </InputField>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -178,6 +305,14 @@ export function ProfileForm({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<FormSectionKey, boolean>>({
+    basics: true,
+    summary: true,
+    socialLinks: true,
+    employment: true,
+    education: true,
+    skills: true,
+  });
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -203,6 +338,13 @@ export function ProfileForm({
     control: form.control,
     name: "skills",
   });
+
+  function toggleSection(section: FormSectionKey) {
+    setOpenSections((current) => ({
+      ...current,
+      [section]: !current[section],
+    }));
+  }
 
   async function onSubmit(values: ProfileFormValues) {
     setIsSubmitting(true);
@@ -259,12 +401,13 @@ export function ProfileForm({
 
       {error ? <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p> : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile basics</CardTitle>
-          <CardDescription>Primary identity, contact details, and a concise professional introduction.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
+      <SectionCard
+        title="Profile basics"
+        description="Primary identity and contact details."
+        isOpen={openSections.basics}
+        onToggle={() => toggleSection("basics")}
+      >
+        <div className="grid gap-4 md:grid-cols-2">
           <InputField id="fullName" label="Full name" error={form.formState.errors.fullName?.message}>
             <Input id="fullName" {...form.register("fullName")} />
           </InputField>
@@ -282,28 +425,33 @@ export function ProfileForm({
               <Input id="address" placeholder="San Francisco, CA" {...form.register("address")} />
             </InputField>
           </div>
-          <div className="md:col-span-2">
-            <InputField id="summary" label="Summary" error={form.formState.errors.summary?.message}>
-              <Textarea id="summary" placeholder="Write a short summary of your experience and value." {...form.register("summary")} />
-            </InputField>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <CardTitle>Social links</CardTitle>
-              <CardDescription>Add optional links like LinkedIn, GitHub, portfolio, or X.</CardDescription>
-            </div>
-            <Button size="sm" variant="outline" onClick={() => socialLinks.append({ label: "", url: "" })}>
-              <Plus className="size-4" />
-              Add link
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <SectionCard
+        title="Summary"
+        description="Write a concise professional introduction."
+        isOpen={openSections.summary}
+        onToggle={() => toggleSection("summary")}
+      >
+        <InputField id="summary" label="Summary" error={form.formState.errors.summary?.message}>
+          <Textarea id="summary" placeholder="Write a short summary of your experience and value." {...form.register("summary")} />
+        </InputField>
+      </SectionCard>
+
+      <SectionCard
+        title="Social links"
+        description="Add optional links like LinkedIn, GitHub, portfolio, or X."
+        isOpen={openSections.socialLinks}
+        onToggle={() => toggleSection("socialLinks")}
+        headerAction={
+          <Button type="button" size="sm" variant="outline" onClick={() => socialLinks.append({ label: "", url: "" })}>
+            <Plus className="size-4" />
+            Add link
+          </Button>
+        }
+      >
+        <div className="space-y-4">
           {socialLinks.fields.length ? (
             socialLinks.fields.map((field, index) => (
               <div key={field.id} className="grid gap-4 rounded-xl border border-border p-4 md:grid-cols-[1fr_2fr_auto] md:items-start">
@@ -318,7 +466,7 @@ export function ProfileForm({
                   <Input id={`social-url-${index}`} placeholder="https://..." {...form.register(`socialLinks.${index}.url`)} />
                 </InputField>
                 <div className="pt-7">
-                  <Button disabled={socialLinks.fields.length === 1} variant="ghost" onClick={() => socialLinks.remove(index)}>
+                  <Button type="button" disabled={socialLinks.fields.length === 1} variant="ghost" onClick={() => socialLinks.remove(index)}>
                     <Trash2 className="size-4" />
                   </Button>
                 </div>
@@ -327,38 +475,38 @@ export function ProfileForm({
           ) : (
             <p className="text-sm text-muted-foreground">No social links added yet.</p>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <CardTitle>Employment history</CardTitle>
-              <CardDescription>Add company context, impact-driven work items, and core tech stacks.</CardDescription>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                employment.append({
-                  companyName: "",
-                  period: "",
-                  title: "",
-                  logoUrl: "",
-                  location: "",
-                  website: "",
-                  workItems: [{ content: "" }],
-                  techStacks: [{ name: "" }],
-                })
-              }
-            >
-              <Plus className="size-4" />
-              Add employment
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <SectionCard
+        title="Employment history"
+        description="Add company context, impact-driven work items, and core tech stacks."
+        isOpen={openSections.employment}
+        onToggle={() => toggleSection("employment")}
+        headerAction={
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              employment.append({
+                companyName: "",
+                period: "",
+                title: "",
+                logoUrl: "",
+                location: "",
+                website: "",
+                workItems: [{ content: "" }],
+                techStacks: [{ name: "" }],
+              })
+            }
+          >
+            <Plus className="size-4" />
+            Add employment
+          </Button>
+        }
+      >
+        <div className="space-y-4">
           {employment.fields.map((field, index) => (
             <EmploymentSection
               key={field.id}
@@ -369,93 +517,74 @@ export function ProfileForm({
               remove={employment.remove}
             />
           ))}
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <CardTitle>Education history</CardTitle>
-              <CardDescription>Add degrees, dates, and optional academic summary notes.</CardDescription>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                education.append({
-                  universityName: "",
-                  period: "",
-                  degree: "",
-                  summary: "",
-                })
-              }
-            >
-              <Plus className="size-4" />
-              Add education
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <SectionCard
+        title="Education history"
+        description="Add degrees, dates, and optional academic summary notes."
+        isOpen={openSections.education}
+        onToggle={() => toggleSection("education")}
+        headerAction={
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              education.append({
+                universityName: "",
+                period: "",
+                degree: "",
+                summary: "",
+              })
+            }
+          >
+            <Plus className="size-4" />
+            Add education
+          </Button>
+        }
+      >
+        <div className="space-y-4">
           {education.fields.map((field, index) => (
-            <div key={field.id} className="grid gap-4 rounded-xl border border-border p-4 md:grid-cols-2">
-              <InputField
-                id={`education-university-${index}`}
-                label="University name"
-                error={form.formState.errors.education?.[index]?.universityName?.message}
-              >
-                <Input id={`education-university-${index}`} {...form.register(`education.${index}.universityName`)} />
-              </InputField>
-              <InputField id={`education-period-${index}`} label="Period" error={form.formState.errors.education?.[index]?.period?.message}>
-                <Input id={`education-period-${index}`} placeholder="2016 - 2020" {...form.register(`education.${index}.period`)} />
-              </InputField>
-              <InputField id={`education-degree-${index}`} label="Degree" error={form.formState.errors.education?.[index]?.degree?.message}>
-                <Input id={`education-degree-${index}`} {...form.register(`education.${index}.degree`)} />
-              </InputField>
-              <div className="flex items-end justify-end">
-                <Button disabled={education.fields.length === 1} variant="ghost" onClick={() => education.remove(index)}>
-                  <Trash2 className="size-4" />
-                  Remove
-                </Button>
-              </div>
-              <div className="md:col-span-2">
-                <InputField id={`education-summary-${index}`} label="Summary" error={form.formState.errors.education?.[index]?.summary?.message}>
-                  <Textarea id={`education-summary-${index}`} {...form.register(`education.${index}.summary`)} />
-                </InputField>
-              </div>
-            </div>
+            <EducationSection
+              key={field.id}
+              errors={form.formState.errors}
+              itemCount={education.fields.length}
+              index={index}
+              register={form.register}
+              remove={education.remove}
+            />
           ))}
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <CardTitle>Skills</CardTitle>
-              <CardDescription>List the skills and tools you want available for tailoring.</CardDescription>
-            </div>
-            <Button size="sm" variant="outline" onClick={() => skills.append({ name: "" })}>
-              <Plus className="size-4" />
-              Add skill
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          {skills.fields.map((field, index) => (
-            <div key={field.id} className="grid gap-3 rounded-xl border border-border p-4 md:grid-cols-[1fr_auto] md:items-start">
-              <InputField id={`skill-${index}`} label="Skill" error={form.formState.errors.skills?.[index]?.name?.message}>
-                <Input id={`skill-${index}`} placeholder="TypeScript" {...form.register(`skills.${index}.name`)} />
-              </InputField>
-              <div className="pt-7">
-                <Button disabled={skills.fields.length === 1} variant="ghost" onClick={() => skills.remove(index)}>
-                  <Trash2 className="size-4" />
-                </Button>
+      <SectionCard
+        title="Skills"
+        description="List the skills and tools you want available for tailoring."
+        isOpen={openSections.skills}
+        onToggle={() => toggleSection("skills")}
+      >
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            {skills.fields.map((field, index) => (
+              <div key={field.id} className="grid gap-3 rounded-xl border border-border p-4 md:grid-cols-[1fr_auto] md:items-start">
+                <InputField id={`skill-${index}`} label="Skill" error={form.formState.errors.skills?.[index]?.name?.message}>
+                  <Input id={`skill-${index}`} placeholder="TypeScript" {...form.register(`skills.${index}.name`)} />
+                </InputField>
+                <div className="pt-7">
+                  <Button type="button" disabled={skills.fields.length === 1} variant="ghost" onClick={() => skills.remove(index)}>
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+            ))}
+          </div>
+          <Button type="button" size="sm" variant="outline" className="w-fit" onClick={() => skills.append({ name: "" })}>
+            <Plus className="size-4" />
+            Add skill
+          </Button>
+        </div>
+      </SectionCard>
     </form>
   );
 }

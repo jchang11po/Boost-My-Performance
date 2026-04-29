@@ -4,6 +4,8 @@ import { TailorEditor } from "@/components/resume/tailor-editor";
 import { db } from "@/lib/db";
 import { mapProfileToTailoredResume, profileInclude } from "@/lib/profile-data";
 
+export const dynamic = "force-dynamic";
+
 export default async function TailorProfilePage({
   params,
 }: {

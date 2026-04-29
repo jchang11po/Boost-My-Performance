@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 export default async function ResumePage() {
   const profiles = await db.profile.findMany({
     orderBy: {
