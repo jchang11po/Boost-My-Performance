@@ -1,6 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { TailorEditor } from "@/components/resume/tailor-editor";
+import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { mapProfileToTailoredResume, profileInclude } from "@/lib/profile-data";
 
@@ -12,9 +13,17 @@ export default async function TailorProfilePage({
   params: Promise<{ profileId: string }>;
 }) {
   const { profileId } = await params;
+  const user = await getCurrentUser();
 
-  const profile = await db.profile.findUnique({
-    where: { id: profileId },
+  if (!user) {
+    redirect("/signin");
+  }
+
+  const profile = await db.profile.findFirst({
+    where: {
+      id: profileId,
+      userId: user.id,
+    },
     include: profileInclude,
   });
 

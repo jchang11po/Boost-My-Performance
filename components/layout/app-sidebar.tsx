@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard, Menu, Settings, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 
+import { SignOutButton } from "@/components/auth/signout-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,11 @@ const navItems = [
     icon: Settings,
   },
 ];
+
+type SidebarUser = {
+  email: string;
+  name: string | null;
+};
 
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -55,7 +61,19 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-export function AppSidebar() {
+function UserPanel({ user }: { user: SidebarUser }) {
+  return (
+    <div className="space-y-3 border-t border-border p-4">
+      <div>
+        <p className="text-sm font-medium">{user.name || user.email}</p>
+        {user.name ? <p className="text-xs text-muted-foreground">{user.email}</p> : null}
+      </div>
+      <SignOutButton />
+    </div>
+  );
+}
+
+export function AppSidebar({ user }: { user: SidebarUser }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -71,6 +89,7 @@ export function AppSidebar() {
         <div className="flex-1 px-4 py-4">
           <SidebarNav />
         </div>
+        <UserPanel user={user} />
       </aside>
 
       <div className="border-b border-border bg-card/80 px-4 py-4 md:hidden">
@@ -100,6 +119,7 @@ export function AppSidebar() {
             <div className="flex-1 px-4 py-4">
               <SidebarNav onNavigate={() => setOpen(false)} />
             </div>
+            <UserPanel user={user} />
           </div>
         </div>
       ) : null}

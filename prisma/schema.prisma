@@ -10,6 +10,7 @@ datasource db {
 
 model Profile {
   id               String                  @id @default(cuid())
+  userId           String?
   fullName         String
   headline         String?
   email            String
@@ -23,6 +24,32 @@ model Profile {
   education        EducationHistory[]
   skills           Skill[]
   tailoredVersions TailoredResumeVersion[]
+  user             User?                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  name         String?
+  passwordHash String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  profiles     Profile[]
+  sessions     AuthSession[]
+}
+
+model AuthSession {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model SocialLink {

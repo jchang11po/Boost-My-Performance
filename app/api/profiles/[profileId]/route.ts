@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { buildProfileWriteData, profileInclude } from "@/lib/profile-data";
 import { profileFormSchema } from "@/lib/validation/resume";
@@ -9,9 +10,17 @@ export async function GET(
   { params }: { params: Promise<{ profileId: string }> },
 ) {
   const { profileId } = await params;
+  const user = await getCurrentUser();
 
-  const profile = await db.profile.findUnique({
-    where: { id: profileId },
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const profile = await db.profile.findFirst({
+    where: {
+      id: profileId,
+      userId: user.id,
+    },
     include: profileInclude,
   });
 
@@ -28,6 +37,26 @@ export async function PATCH(
 ) {
   try {
     const { profileId } = await params;
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const existingProfile = await db.profile.findFirst({
+      where: {
+        id: profileId,
+        userId: user.id,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!existingProfile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+
     const body = await request.json();
     const values = profileFormSchema.parse(body);
     const writeData = buildProfileWriteData(values);
@@ -73,6 +102,25 @@ export async function DELETE(
 ) {
   try {
     const { profileId } = await params;
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const existingProfile = await db.profile.findFirst({
+      where: {
+        id: profileId,
+        userId: user.id,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!existingProfile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
 
     await db.profile.delete({
       where: { id: profileId },

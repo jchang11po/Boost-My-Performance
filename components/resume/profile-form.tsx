@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Trash2, Upload } from "lucide-react";
 import { useState } from "react";
 import { useFieldArray, useForm, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -130,7 +130,7 @@ function EmploymentSection({
           </Button>
           <h3 className="font-medium">Employment #{index + 1}</h3>
         </div>
-        <Button type="button" disabled={index === 0} size="sm" variant="ghost" onClick={() => remove(index)}>
+        <Button type="button" size="sm" variant="ghost" onClick={() => remove(index)}>
           <Trash2 className="size-4" />
           Remove
         </Button>
@@ -304,7 +304,12 @@ export function ProfileForm({
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [autofillError, setAutofillError] = useState<string | null>(null);
+  const [autofillMessage, setAutofillMessage] = useState<string | null>(null);
+  const [isAutofilling, setIsAutofilling] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [resumeText, setResumeText] = useState("");
   const [openSections, setOpenSections] = useState<Record<FormSectionKey, boolean>>({
     basics: true,
     summary: true,
@@ -344,6 +349,82 @@ export function ProfileForm({
       ...current,
       [section]: !current[section],
     }));
+  }
+
+  function readFileAsDataUrl(file: File) {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.addEventListener("load", () => {
+        if (typeof reader.result === "string") {
+          resolve(reader.result);
+          return;
+        }
+
+        reject(new Error("Unable to read the selected file"));
+      });
+      reader.addEventListener("error", () => reject(new Error("Unable to read the selected file")));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleAutofill() {
+    const trimmedResumeText = resumeText.trim();
+
+    if (!trimmedResumeText && !resumeFile) {
+      setAutofillError("Paste resume text or upload a resume file first.");
+      setAutofillMessage(null);
+      return;
+    }
+
+    if (resumeFile && resumeFile.size > 8 * 1024 * 1024) {
+      setAutofillError("Upload a resume file smaller than 8 MB.");
+      setAutofillMessage(null);
+      return;
+    }
+
+    setIsAutofilling(true);
+    setAutofillError(null);
+    setAutofillMessage(null);
+
+    try {
+      const response = await fetch("/api/profiles/autofill", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resumeText: trimmedResumeText || undefined,
+          file: resumeFile
+            ? {
+                name: resumeFile.name,
+                dataUrl: await readFileAsDataUrl(resumeFile),
+              }
+            : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error || "Unable to autofill profile");
+      }
+
+      const data = (await response.json()) as { profile: ProfileFormValues };
+      form.reset(data.profile);
+      setOpenSections({
+        basics: true,
+        summary: true,
+        socialLinks: true,
+        employment: true,
+        education: true,
+        skills: true,
+      });
+      setAutofillMessage("Profile fields were autofilled from the resume. Review them before saving.");
+    } catch (autofillError) {
+      setAutofillError(autofillError instanceof Error ? autofillError.message : "Unable to autofill profile");
+    } finally {
+      setIsAutofilling(false);
+    }
   }
 
   async function onSubmit(values: ProfileFormValues) {
@@ -398,6 +479,49 @@ export function ProfileForm({
           </Button>
         </div>
       </div>
+
+      {!profileId ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Autofill from existing resume</CardTitle>
+            <CardDescription>
+              Paste resume text or upload a resume file to populate the profile fields, even if it was created outside this app.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <InputField id="resume-import-file" label="Resume file">
+                <Input
+                  id="resume-import-file"
+                  type="file"
+                  accept=".pdf,.txt,.md,text/plain,application/pdf"
+                  onChange={(event) => setResumeFile(event.target.files?.[0] ?? null)}
+                />
+              </InputField>
+              <div className="flex items-end">
+                <Button type="button" variant="secondary" disabled={isAutofilling} onClick={handleAutofill}>
+                  <Upload className="size-4" />
+                  {isAutofilling ? "Autofilling..." : "Autofill profile"}
+                </Button>
+              </div>
+            </div>
+            <InputField id="resume-import-text" label="Resume text">
+              <Textarea
+                id="resume-import-text"
+                placeholder="Paste your existing resume here if you do not have a PDF or text file."
+                value={resumeText}
+                onChange={(event) => setResumeText(event.target.value)}
+              />
+            </InputField>
+            {autofillError ? (
+              <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{autofillError}</p>
+            ) : null}
+            {autofillMessage ? (
+              <p className="rounded-lg border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">{autofillMessage}</p>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {error ? <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p> : null}
 
@@ -507,16 +631,20 @@ export function ProfileForm({
         }
       >
         <div className="space-y-4">
-          {employment.fields.map((field, index) => (
-            <EmploymentSection
-              key={field.id}
-              control={form.control}
-              errors={form.formState.errors}
-              index={index}
-              register={form.register}
-              remove={employment.remove}
-            />
-          ))}
+          {employment.fields.length ? (
+            employment.fields.map((field, index) => (
+              <EmploymentSection
+                key={field.id}
+                control={form.control}
+                errors={form.formState.errors}
+                index={index}
+                register={form.register}
+                remove={employment.remove}
+              />
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground">No employment history added yet.</p>
+          )}
         </div>
       </SectionCard>
 

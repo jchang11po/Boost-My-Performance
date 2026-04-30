@@ -1,15 +1,26 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 
 import { ProfileList } from "@/components/resume/profile-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function ResumePage() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect("/signin");
+  }
+
   const profiles = await db.profile.findMany({
+    where: {
+      userId: user.id,
+    },
     orderBy: {
       updatedAt: "desc",
     },

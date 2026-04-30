@@ -5,6 +5,8 @@ import {
   getOpenAIClient,
   getOpenAIModel,
 } from "@/lib/openai";
+import { getCurrentUser } from "@/lib/auth";
+import { db } from "@/lib/db";
 import {
   generateTailoredResumeRequestSchema,
   generatedTailoringSchema,
@@ -23,8 +25,32 @@ function getAllowedUpdateSummary(settings: Awaited<ReturnType<typeof getTailorin
   return allowedUpdates.length ? allowedUpdates.join(", ") : "no resume sections";
 }
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ profileId: string }> },
+) {
   try {
+    const { profileId } = await params;
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const profile = await db.profile.findFirst({
+      where: {
+        id: profileId,
+        userId: user.id,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!profile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+
     const body = await request.json();
     const {
       additionalInstructions,

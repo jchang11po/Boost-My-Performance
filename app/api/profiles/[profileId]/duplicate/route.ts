@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { buildProfileWriteData, mapProfileToForm, profileInclude } from "@/lib/profile-data";
 
@@ -9,9 +10,17 @@ export async function POST(
 ) {
   try {
     const { profileId } = await params;
+    const user = await getCurrentUser();
 
-    const profile = await db.profile.findUnique({
-      where: { id: profileId },
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const profile = await db.profile.findFirst({
+      where: {
+        id: profileId,
+        userId: user.id,
+      },
       include: profileInclude,
     });
 
@@ -23,7 +32,14 @@ export async function POST(
     values.fullName = `${values.fullName} (Copy)`;
 
     const duplicatedProfile = await db.profile.create({
-      data: buildProfileWriteData(values),
+      data: {
+        ...buildProfileWriteData(values),
+        user: {
+          connect: {
+            id: user.id,
+          },
+        },
+      },
     });
 
     return NextResponse.json({ id: duplicatedProfile.id }, { status: 201 });
