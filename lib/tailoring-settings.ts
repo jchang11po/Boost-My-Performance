@@ -11,7 +11,15 @@ export const DEFAULT_TAILORING_SETTINGS: TailoringSettingsValues = {
   updateSummary: true,
 };
 
-function mapSettings(settings: Partial<TailoringSettingsValues>): TailoringSettingsValues {
+type PersistedTailoringSettings = {
+  updateWorkItems?: unknown;
+  workItemUpdateMode?: unknown;
+  updateEmploymentTitles?: unknown;
+  updateSkills?: unknown;
+  updateSummary?: unknown;
+};
+
+function mapSettings(settings: PersistedTailoringSettings): TailoringSettingsValues {
   return tailoringSettingsSchema.parse({
     ...DEFAULT_TAILORING_SETTINGS,
     updateWorkItems: settings.updateWorkItems,
