@@ -135,6 +135,7 @@ export const generateTailoredResumeRequestSchema = z.object({
 
 export const tailoringSettingsSchema = z.object({
   updateWorkItems: z.boolean().default(true),
+  workItemUpdateMode: z.enum(["replace", "tailor"]).default("replace"),
   updateEmploymentTitles: z.boolean().default(true),
   updateSkills: z.boolean().default(true),
   updateSummary: z.boolean().default(true),

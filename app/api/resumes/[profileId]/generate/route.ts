@@ -14,15 +14,58 @@ import {
 } from "@/lib/validation/resume";
 import { getTailoringSettings } from "@/lib/tailoring-settings";
 
-function getAllowedUpdateSummary(settings: Awaited<ReturnType<typeof getTailoringSettings>>) {
+function getAllowedUpdateSummary(
+  settings: Awaited<ReturnType<typeof getTailoringSettings>>,
+) {
   const allowedUpdates = [
     settings.updateSummary ? "summary" : null,
     settings.updateEmploymentTitles ? "employment titles" : null,
-    settings.updateWorkItems ? "employment work items" : null,
+    settings.updateWorkItems
+      ? `employment work items (${settings.workItemUpdateMode === "replace" ? "generate new bullets" : "tailor existing bullets"})`
+      : null,
     settings.updateSkills ? "employment tech stacks and skills section" : null,
   ].filter(Boolean);
 
-  return allowedUpdates.length ? allowedUpdates.join(", ") : "no resume sections";
+  return allowedUpdates.length
+    ? allowedUpdates.join(", ")
+    : "no resume sections";
+}
+
+function getWorkItemInstructions(
+  settings: Awaited<ReturnType<typeof getTailoringSettings>>,
+) {
+  if (!settings.updateWorkItems) {
+    return "- Keep employment work items unchanged.";
+  }
+
+  if (settings.workItemUpdateMode === "tailor") {
+    return "- Update each original employment work item so it is tailored to the target role. Preserve the same work item count, order, and one-to-one meaning for each employment entry.";
+  }
+
+  return "- Remove the original employment work item list and generate a new concise, achievement-oriented bullet list for each employment entry aligned to the target role.";
+}
+
+function getMergedWorkItems({
+  currentWorkItems,
+  generatedWorkItems,
+  settings,
+}: {
+  currentWorkItems: { content: string }[];
+  generatedWorkItems?: { content: string }[];
+  settings: Awaited<ReturnType<typeof getTailoringSettings>>;
+}) {
+  if (!settings.updateWorkItems || !generatedWorkItems?.length) {
+    return currentWorkItems;
+  }
+
+  if (
+    settings.workItemUpdateMode === "tailor" &&
+    generatedWorkItems.length !== currentWorkItems.length
+  ) {
+    return currentWorkItems;
+  }
+
+  return generatedWorkItems;
 }
 
 export async function POST(
@@ -117,14 +160,14 @@ export async function POST(
                 settings.updateEmploymentTitles
                   ? "- Update employment titles to better match the target role."
                   : "- Keep employment titles unchanged.",
-                settings.updateWorkItems
-                  ? "- Keep each work item concise, achievement-oriented, and aligned to the target role."
-                  : "- Keep employment work items unchanged.",
-                settings.updateEmploymentTitles || settings.updateWorkItems || settings.updateSkills
+                getWorkItemInstructions(settings),
+                settings.updateEmploymentTitles ||
+                settings.updateWorkItems ||
+                settings.updateSkills
                   ? "- Focus employment-specific updates on the three most recent companies in the source order; keep older roles closer to the source unless they strongly support the target role."
                   : "",
                 settings.updateSkills
-                  ? "- Return focused employment tech stacks and a skills list using only skills already present or directly supported by the source resume. Keep tech stacks that are related to the job or broadly relevant, add supported related tech stacks where they fit, and order each stack from most to least important for the target role."
+                  ? "- Update each employment section's tech stacks and the skills list to be tailored to the target role. Remove skills that are clearly irrelevant to the target job, add missed relevant supported skills where they fit, and order each stack/list from most to least important for the target role."
                   : "- Keep employment tech stacks and the skills section unchanged.",
                 settings.updateSummary
                   ? "- Update the summary to reflect the target role."
@@ -164,19 +207,22 @@ export async function POST(
     const mergedResume = tailoredResumeSchema.parse({
       ...currentResume,
       resumeTitle: generated.resumeTitle,
-      summary: settings.updateSummary ? generated.summary : currentResume.summary,
+      summary: settings.updateSummary
+        ? generated.summary
+        : currentResume.summary,
       employment: currentResume.employment.map((employment, index) => ({
         ...employment,
         title: settings.updateEmploymentTitles
           ? generated.employment[index]?.title || employment.title
           : employment.title,
-        workItems: settings.updateWorkItems && generated.employment[index]?.workItems?.length
-          ? generated.employment[index].workItems
-          : employment.workItems,
-        techStacks:
-          settings.updateSkills
-            ? generated.employment[index]?.techStacks ?? employment.techStacks
-            : employment.techStacks,
+        workItems: getMergedWorkItems({
+          currentWorkItems: employment.workItems,
+          generatedWorkItems: generated.employment[index]?.workItems,
+          settings,
+        }),
+        techStacks: settings.updateSkills
+          ? (generated.employment[index]?.techStacks ?? employment.techStacks)
+          : employment.techStacks,
       })),
       skills: settings.updateSkills ? generated.skills : currentResume.skills,
     });

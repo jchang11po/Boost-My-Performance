@@ -125,6 +125,7 @@ model TailoredResumeVersion {
 model TailoringSettings {
   id                     String   @id @default("global")
   updateWorkItems        Boolean  @default(true)
+  workItemUpdateMode     String   @default("replace")
   updateEmploymentTitles Boolean  @default(true)
   updateSkills           Boolean  @default(true)
   updateSummary          Boolean  @default(true)

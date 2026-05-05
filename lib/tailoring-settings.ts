@@ -5,18 +5,21 @@ const GLOBAL_TAILORING_SETTINGS_ID = "global";
 
 export const DEFAULT_TAILORING_SETTINGS: TailoringSettingsValues = {
   updateWorkItems: true,
+  workItemUpdateMode: "replace",
   updateEmploymentTitles: true,
   updateSkills: true,
   updateSummary: true,
 };
 
-function mapSettings(settings: TailoringSettingsValues): TailoringSettingsValues {
-  return {
+function mapSettings(settings: Partial<TailoringSettingsValues>): TailoringSettingsValues {
+  return tailoringSettingsSchema.parse({
+    ...DEFAULT_TAILORING_SETTINGS,
     updateWorkItems: settings.updateWorkItems,
+    workItemUpdateMode: settings.workItemUpdateMode,
     updateEmploymentTitles: settings.updateEmploymentTitles,
     updateSkills: settings.updateSkills,
     updateSummary: settings.updateSummary,
-  };
+  });
 }
 
 export async function getTailoringSettings(): Promise<TailoringSettingsValues> {
